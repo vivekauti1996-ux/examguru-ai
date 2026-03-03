@@ -1,14 +1,61 @@
-import { createClient } from '@supabase/supabase-js';
+const https = require('https');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
-// Daily limits per plan
 const LIMITS = { free: 3, pro: 999, booster: 9999 };
 
-export default async function handler(req, res) {
+async function supabaseRequest(path, method, body, serviceKey, supabaseUrl) {
+  const url = new URL(supabaseUrl + '/rest/v1' + path);
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': serviceKey,
+        'Authorization': 'Bearer ' + serviceKey,
+        'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : '',
+      }
+    };
+    if (data) options.headers['Content-Length'] = Buffer.byteLength(data);
+    const req = https.request(options, (res) => {
+      let responseData = '';
+      res.on('data', (chunk) => responseData += chunk);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(responseData || '[]') }); }
+        catch(e) { resolve({ status: res.statusCode, data: [] }); }
+      });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+async function getUser(token, supabaseUrl, serviceKey) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: new URL(supabaseUrl).hostname,
+      path: '/auth/v1/user',
+      method: 'GET',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': 'Bearer ' + token,
+      }
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch(e) { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.end();
+  });
+}
+
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -19,58 +66,60 @@ export default async function handler(req, res) {
     const { prompt, stream = false, token } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
-    // ── 1. Identify user ──────────────────────────────────────────────
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
     let userId = null;
     let userPlan = 'free';
 
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-        const today = new Date().toISOString();
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('plan, status, expires_at')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .gte('expires_at', today)
-          .single();
-        if (sub) userPlan = sub.plan;
-      }
+    // Check user and plan
+    if (token && SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        const user = await getUser(token, SUPABASE_URL, SUPABASE_KEY);
+        if (user && user.id) {
+          userId = user.id;
+          const today = new Date().toISOString();
+          const subRes = await supabaseRequest(
+            `/subscriptions?user_id=eq.${userId}&status=eq.active&expires_at=gte.${today}&select=plan&limit=1`,
+            'GET', null, SUPABASE_KEY, SUPABASE_URL
+          );
+          if (subRes.data && subRes.data[0]) userPlan = subRes.data[0].plan;
+        }
+      } catch(e) { /* continue without auth */ }
     }
 
-    const dailyLimit = LIMITS[userPlan] ?? LIMITS.free;
+    const dailyLimit = LIMITS[userPlan] || LIMITS.free;
 
-    // ── 2. Check & update usage ────────────────────────────────────────
-    if (userId) {
-      const today = new Date().toISOString().split('T')[0];
-      const { data: usage } = await supabase
-        .from('usage')
-        .select('count')
-        .eq('user_id', userId)
-        .eq('date', today)
-        .single();
+    // Check & update usage
+    if (userId && SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        const todayDate = new Date().toISOString().split('T')[0];
+        const usageRes = await supabaseRequest(
+          `/usage?user_id=eq.${userId}&date=eq.${todayDate}&select=count&limit=1`,
+          'GET', null, SUPABASE_KEY, SUPABASE_URL
+        );
+        const currentCount = (usageRes.data && usageRes.data[0]) ? usageRes.data[0].count : 0;
 
-      const currentCount = usage?.count ?? 0;
-      if (currentCount >= dailyLimit) {
-        return res.status(429).json({
-          error: 'limit_reached',
-          plan: userPlan,
-          limit: dailyLimit,
-          message: userPlan === 'free'
-            ? 'Free limit reached. Upgrade to Pro for unlimited access!'
-            : 'Daily limit reached. Try again tomorrow.',
-        });
-      }
+        if (currentCount >= dailyLimit) {
+          return res.status(429).json({
+            error: 'limit_reached',
+            plan: userPlan,
+            limit: dailyLimit,
+            message: userPlan === 'free'
+              ? 'Free limit reached. Upgrade to Pro for unlimited access!'
+              : 'Daily limit reached. Try again tomorrow.',
+          });
+        }
 
-      await supabase
-        .from('usage')
-        .upsert({ user_id: userId, date: today, count: currentCount + 1 },
-                 { onConflict: 'user_id, date' });
+        await supabaseRequest('/usage', 'POST',
+          { user_id: userId, date: todayDate, count: currentCount + 1 },
+          SUPABASE_KEY, SUPABASE_URL
+        );
+      } catch(e) { /* continue without usage tracking */ }
     }
 
-    // ── 3. Call Anthropic ─────────────────────────────────────────────
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Call Anthropic
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,20 +129,20 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
-        stream,
+        stream: stream,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json({ error: err });
+    if (!anthropicResponse.ok) {
+      const err = await anthropicResponse.json();
+      return res.status(anthropicResponse.status).json({ error: err });
     }
 
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
-      const reader = response.body.getReader();
+      const reader = anthropicResponse.body.getReader();
       const decoder = new TextDecoder();
       while (true) {
         const { done, value } = await reader.read();
@@ -102,12 +151,12 @@ export default async function handler(req, res) {
       }
       res.end();
     } else {
-      const data = await response.json();
+      const data = await anthropicResponse.json();
       res.status(200).json(data);
     }
 
   } catch (err) {
     console.error('Chat API Error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
-}
+};
