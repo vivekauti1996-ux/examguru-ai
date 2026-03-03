@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<title>ExamGuru AI – India's Smartest Exam Prep</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface: #111520;
+    --card: #161c2e;
+    --border: #1f2a45;
+    --accent: #f5a623;
+    --accent2: #e05c2e;
+    --blue: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e8eaf0;
+    --muted: #6b7a99;
+    --highlight: #f5a62322;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BG texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 20% 10%, #1a2a5522 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 80%, #f5a62308 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: #0a0d14dd;
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .logo span { font-weight: 400; }
+  .tagline { font-size: 0.72rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+
+  /* ---- NAV TABS ---- */
+  nav {
+    display: flex; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 5px;
+  }
+  .tab {
+    padding: 8px 16px; border-radius: 10px;
+    font-size: 0.82rem; font-weight: 500;
+    cursor: pointer; border: none; background: transparent;
+    color: var(--muted); transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .tab:hover:not(.active) { color: var(--text); background: var(--card); }
+
+  /* ---- MAIN ---- */
+  main { max-width: 1000px; margin: 0 auto; padding: 32px 20px; position: relative; z-index: 1; }
+
+  .section { display: none; animation: fadeIn .35s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* ---- SHARED COMPONENTS ---- */
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .page-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 28px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .pill {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .pill-orange { background: #f5a62322; color: var(--accent); border: 1px solid #f5a62344; }
+  .pill-blue   { background: #3b82f622; color: var(--blue);   border: 1px solid #3b82f644; }
+  .pill-green  { background: #22c55e22; color: var(--green);  border: 1px solid #22c55e44; }
+  .pill-red    { background: #ef444422; color: var(--red);    border: 1px solid #ef444444; }
+
+  /* Select / Input */
+  select, textarea, input[type=text] {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
+    outline: none; transition: border .2s; width: 100%;
+  }
+  select:focus, textarea:focus, input[type=text]:focus { border-color: var(--accent); }
+  select option { background: var(--card); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 10px; border: none;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.88rem;
+    cursor: pointer; transition: all .2s; letter-spacing: .03em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: .85; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+  /* AI Output Box */
+  .ai-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+    min-height: 80px; line-height: 1.75;
+    font-size: 0.9rem; white-space: pre-wrap;
+    position: relative;
+  }
+  .ai-box.loading::after {
+    content: '';
+    display: inline-block; width: 8px; height: 18px;
+    background: var(--accent); margin-left: 4px;
+    animation: blink .7s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #fff4; border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============================
+     1. QUIZ SECTION
+  ============================= */
+  .quiz-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .quiz-controls select { flex: 1; min-width: 160px; }
+
+  .quiz-question-card {
+    border: 1px solid var(--border); border-radius: 16px;
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .quiz-q-header {
+    background: linear-gradient(135deg, #1a2340, #1e2845);
+    padding: 16px 20px;
+    font-weight: 600; font-size: 0.95rem; line-height: 1.6;
+  }
+  .quiz-options { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .quiz-opt {
+    padding: 12px 16px; border-radius: 10px;
+    border: 1px solid var(--border); cursor: pointer;
+    transition: all .2s; font-size: 0.88rem;
+    background: var(--surface);
+  }
+  .quiz-opt:hover:not(.disabled) { border-color: var(--accent); background: var(--highlight); }
+  .quiz-opt.correct { background: #22c55e18; border-color: var(--green); color: var(--green); }
+  .quiz-opt.wrong   { background: #ef444418; border-color: var(--red); color: var(--red); }
+  .quiz-opt.disabled { cursor: default; }
+
+  .quiz-explanation {
+    margin: 0 20px 16px; padding: 14px;
+    background: #f5a62310; border: 1px solid #f5a62333;
+    border-radius: 10px; font-size: 0.85rem; line-height: 1.65; color: #f5d08a;
+  }
+
+  .quiz-score-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 20px; font-size: 0.85rem;
+  }
+  .score-num { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+
+  /* ============================
+     2. INTERVIEW Q&A
+  ============================= */
+  .interview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media(max-width:600px){ .interview-grid { grid-template-columns: 1fr; } }
+
+  .qa-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 12px;
+  }
+  .qa-q { font-weight: 600; margin-bottom: 10px; font-size: 0.9rem; color: var(--accent); }
+  .qa-a { font-size: 0.86rem; line-height: 1.7; color: #c0c8dc; }
+
+  /* ============================
+     3. TOPIC EXPLAINER
+  ============================= */
+  .explain-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .explain-row select { flex: 1; min-width: 140px; }
+  .explain-row input { flex: 2; min-width: 200px; }
+
+  /* ============================
+     4. MOCK TEST
+  ============================= */
+  .mock-setup { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: flex-end; }
+  .mock-setup > * { flex: 1; min-width: 140px; }
+  .mock-setup label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 5px; }
+
+  .mock-timer {
+    font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800;
+    color: var(--accent); text-align: center; padding: 8px 0;
+  }
+  .mock-progress {
+    height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: 20px;
+  }
+  .mock-progress-bar {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .3s;
+  }
+  .mock-result-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px;
+  }
+  .mock-result-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; text-align: center;
+  }
+  .mock-result-card .num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; }
+  .mock-result-card .lbl { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+
+  /* ============================
+     5. NOTES
+  ============================= */
+  .notes-toolbar {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .notes-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .note-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .note-card-header { display: flex; align-items: center; justify-content: space-between; }
+  .note-title { font-weight: 600; font-size: 0.9rem; }
+  .note-body { font-size: 0.83rem; color: #8a96b0; line-height: 1.6; white-space: pre-wrap; }
+  .note-meta { font-size: 0.72rem; color: var(--muted); }
+  .note-del { background: transparent; border: none; color: var(--red); cursor: pointer; font-size: 1rem; }
+
+  .ai-note-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+  /* ============================
+     6. GK & CURRENT AFFAIRS
+  ============================= */
+  .gk-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .gk-tab {
+    padding: 7px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); transition: all .2s;
+  }
+  .gk-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .ca-card {
+    border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .ca-header {
+    background: var(--card); padding: 14px 18px;
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+  }
+  .ca-title { font-weight: 600; font-size: 0.9rem; flex: 1; }
+  .ca-body { padding: 14px 18px; font-size: 0.86rem; line-height: 1.75; color: #b0bcd4; border-top: 1px solid var(--border); }
+  .ca-toggle { color: var(--muted); font-size: 1.1rem; transition: transform .2s; }
+  .ca-toggle.open { transform: rotate(180deg); }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+  /* Responsive header */
+  @media(max-width:700px){
+    header { flex-direction: column; gap: 12px; padding: 14px; }
+    nav { flex-wrap: wrap; justify-content: center; }
+    .tab { font-size: 0.75rem; padding: 7px 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">ExamGuru <span>AI</span></div>
+    <div class="tagline">India's Smartest AI Exam Prep Platform</div>
+  </div>
+  <nav>
+    <button class="tab active" onclick="showSection('quiz')">🎯 Quiz</button>
+    <button class="tab" onclick="showSection('interview')">💼 Interview</button>
+    <button class="tab" onclick="showSection('explain')">📖 Explainer</button>
+    <button class="tab" onclick="showSection('mock')">⏱️ Mock Test</button>
+    <button class="tab" onclick="showSection('notes')">📝 Notes</button>
+    <button class="tab" onclick="showSection('gk')">🌏 GK & Affairs</button>
+  </nav>
+  <div id="userBar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
+</header>
+
+<main>
+
+<!-- ===================== QUIZ ===================== -->
+<section id="quiz" class="section active">
+  <div class="page-title">🎯 AI Quiz Generator</div>
+  <div class="page-sub">Get fresh MCQs powered by AI for any exam and topic</div>
+
+  <div class="quiz-score-bar">
+    <div class="score-num" id="scoreNum">0</div>
+    <div>
+      <div style="font-weight:600">Score</div>
+      <div style="color:var(--muted);font-size:.78rem" id="scoreDetail">Answer questions to score points</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <span class="pill pill-green" id="correctCount">✓ 0</span>
+      <span class="pill pill-red" id="wrongCount">✗ 0</span>
+    </div>
+  </div>
+
+  <div class="quiz-controls">
+    <select id="quizExam">
+      <option value="UPSC">UPSC / IAS</option>
+      <option value="SSC CGL">SSC CGL</option>
+      <option value="Bank PO IBPS">Bank PO / IBPS</option>
+      <option value="Railway RRB">Railway RRB</option>
+      <option value="NEET">NEET</option>
+      <option value="JEE">JEE</option>
+      <option value="CAT">CAT / MBA</option>
+      <option value="IT Interview">IT / Tech Interview</option>
+    </select>
+    <select id="quizSubject">
+      <option value="General Knowledge">General Knowledge</option>
+      <option value="Polity & Constitution">Polity & Constitution</option>
+      <option value="History">History</option>
+      <option value="Geography">Geography</option>
+      <option value="Economy">Economy</option>
+      <option value="Science & Technology">Science & Technology</option>
+      <option value="Current Affairs">Current Affairs</option>
+      <option value="Mathematics / Reasoning">Mathematics / Reasoning</option>
+      <option value="English">English</option>
+      <option value="Data Structures & Algorithms">DSA (IT)</option>
+    </select>
+    <select id="quizDifficulty">
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <button class="btn btn-primary" id="generateQuizBtn" onclick="generateQuiz()">
+      <span id="quizBtnTxt">⚡ Generate</span>
+    </button>
+  </div>
+
+  <div id="quizArea"></div>
+</section>
+
+<!-- ===================== INTERVIEW ===================== -->
+<section id="interview" class="section">
+  <div class="page-title">💼 Interview Q&A Practice</div>
+  <div class="page-sub">Get tailored interview questions with model answers</div>
+
+  <div class="interview-grid">
+    <div>
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:5px">Job/Exam Role</label>
+      <select id="intRole">
+        <option>IAS / IPS Officer</option>
+        <option>Software Engineer</option>
+        <option>Bank PO</option>
+        <option>SSC Officer</option>
+        <option>Data Scientist</option>
+        <option>Product Manager</option>
+        <option>Railway Officer</option>
+        <option>Defence Officer (NDA/CDS)</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:5px">Round Type</label>
+      <select id="intRound">
+        <option>HR / Personality</option>
+        <option>Technical / Domain</option>
+        <option>Case Study</option>
+        <option>Group Discussion</option>
+        <option>Situational Judgement</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:5px">Experience Level</label>
+      <select id="intLevel">
+        <option>Fresher</option>
+        <option>1-3 Years</option>
+        <option>3-5 Years</option>
+        <option>Senior</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end">
+      <button class="btn btn-primary" style="width:100%" id="intBtn" onclick="generateInterview()">
+        <span id="intBtnTxt">⚡ Generate Questions</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="intQA"></div>
+</section>
+
+<!-- ===================== EXPLAINER ===================== -->
+<section id="explain" class="section">
+  <div class="page-title">📖 Topic Explainer</div>
+  <div class="page-sub">Any topic explained simply with examples and memory tips</div>
+
+  <div class="explain-row">
+    <select id="expExam">
+      <option>UPSC</option><option>SSC CGL</option><option>Bank PO</option>
+      <option>NEET</option><option>JEE</option><option>IT Interview</option>
+    </select>
+    <input type="text" id="expTopic" placeholder="Type a topic (e.g. Fundamental Rights, Photosynthesis, Arrays)">
+    <select id="expLang">
+      <option value="English">English</option>
+      <option value="Hindi (Hinglish)">Hinglish</option>
+    </select>
+    <button class="btn btn-primary" id="expBtn" onclick="explainTopic()">
+      <span id="expBtnTxt">📖 Explain</span>
+    </button>
+  </div>
+
+  <div id="expOutput" class="ai-box" style="display:none"></div>
+</section>
+
+<!-- ===================== MOCK TEST ===================== -->
+<section id="mock" class="section">
+  <div class="page-title">⏱️ Mock Test</div>
+  <div class="page-sub">Timed full mock test with score analysis</div>
+
+  <div id="mockSetup">
+    <div class="mock-setup">
+      <div>
+        <label>Exam</label>
+        <select id="mockExam">
+          <option>UPSC</option><option>SSC CGL</option><option>Bank PO</option>
+          <option>Railway RRB</option><option>IT Interview</option>
+        </select>
+      </div>
+      <div>
+        <label>No. of Questions</label>
+        <select id="mockQCount">
+          <option value="5">5 (Quick)</option>
+          <option value="10" selected>10 (Standard)</option>
+        </select>
+      </div>
+      <div>
+        <label>Time per Question</label>
+        <select id="mockTime">
+          <option value="60">60 sec</option>
+          <option value="90">90 sec</option>
+          <option value="120">2 min</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" style="width:100%" id="mockStartBtn" onclick="startMock()">
+          <span id="mockStartTxt">🚀 Start Test</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mockTest" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span class="pill pill-orange" id="mockQLabel">Q 1 / 10</span>
+      <div class="mock-timer" id="mockTimer">01:00</div>
+      <button class="btn btn-secondary" onclick="endMockEarly()">End Test</button>
+    </div>
+    <div class="mock-progress"><div class="mock-progress-bar" id="mockBar" style="width:0%"></div></div>
+    <div id="mockQArea"></div>
+  </div>
+
+  <div id="mockResult" style="display:none">
+    <div class="page-title" style="margin-bottom:20px">📊 Test Result</div>
+    <div class="mock-result-grid">
+      <div class="mock-result-card">
+        <div class="num" id="resScore" style="color:var(--accent)">0</div>
+        <div class="lbl">Score</div>
+      </div>
+      <div class="mock-result-card">
+        <div class="num" id="resCorrect" style="color:var(--green)">0</div>
+        <div class="lbl">Correct</div>
+      </div>
+      <div class="mock-result-card">
+        <div class="num" id="resWrong" style="color:var(--red)">0</div>
+        <div class="lbl">Wrong</div>
+      </div>
+    </div>
+    <div id="mockReview"></div>
+    <button class="btn btn-primary" onclick="resetMock()">🔄 New Test</button>
+  </div>
+</section>
+
+<!-- ===================== NOTES ===================== -->
+<section id="notes" class="section">
+  <div class="page-title">📝 Smart Notes</div>
+  <div class="page-sub">Save handwritten notes or generate AI study notes for any topic</div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div style="font-weight:600;margin-bottom:14px;font-size:.95rem">✍️ Add Your Own Note</div>
+    <input type="text" id="noteTitle" placeholder="Note title (e.g. Articles of Indian Constitution)" style="margin-bottom:10px">
+    <textarea id="noteBody" rows="4" placeholder="Write your notes here..." style="margin-bottom:10px"></textarea>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <select id="noteTag" style="flex:1;min-width:120px">
+        <option>UPSC</option><option>SSC</option><option>Bank PO</option><option>Railway</option><option>IT</option><option>Other</option>
+      </select>
+      <button class="btn btn-primary" onclick="saveNote()">💾 Save Note</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="font-weight:600;margin-bottom:14px;font-size:.95rem">🤖 AI Note Generator</div>
+  <div class="ai-note-area">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <select id="aiNoteExam" style="flex:1;min-width:120px">
+        <option>UPSC</option><option>SSC</option><option>Bank PO</option><option>NEET</option><option>JEE</option><option>IT</option>
+      </select>
+      <input type="text" id="aiNoteTopic" placeholder="Topic (e.g. Indian Parliament, Electromagnetic Waves)" style="flex:2;min-width:180px">
+      <button class="btn btn-primary" id="aiNoteBtn" onclick="generateNote()"><span id="aiNoteBtnTxt">⚡ Generate Notes</span></button>
+    </div>
+    <div id="aiNoteOutput" class="ai-box" style="display:none"></div>
+    <button id="saveAiNoteBtn" class="btn btn-secondary" style="display:none" onclick="saveAiNote()">💾 Save These Notes</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="font-weight:600;margin-bottom:14px">📚 Saved Notes</div>
+  <div id="notesList"></div>
+</section>
+
+<!-- ===================== GK & CURRENT AFFAIRS ===================== -->
+<section id="gk" class="section">
+  <div class="page-title">🌏 GK & Current Affairs</div>
+  <div class="page-sub">AI-powered general knowledge and current affairs for all exams</div>
+
+  <div class="gk-tabs">
+    <button class="gk-tab active" onclick="setGkTab('ca',this)">📰 Current Affairs</button>
+    <button class="gk-tab" onclick="setGkTab('gk',this)">🧠 GK Capsule</button>
+    <button class="gk-tab" onclick="setGkTab('quiz',this)">🎯 GK Quiz</button>
+    <button class="gk-tab" onclick="setGkTab('one',this)">📌 One-Liners</button>
+  </div>
+
+  <!-- Current Affairs -->
+  <div id="gkTab-ca">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select id="caMonth" style="flex:1;min-width:140px">
+        <option>March 2025</option><option>February 2025</option><option>January 2025</option>
+        <option>December 2024</option><option>November 2024</option>
+      </select>
+      <select id="caCategory" style="flex:1;min-width:140px">
+        <option>All Categories</option><option>National</option><option>International</option>
+        <option>Economy & Finance</option><option>Science & Tech</option><option>Sports</option>
+        <option>Awards & Honours</option><option>Appointments</option>
+      </select>
+      <button class="btn btn-primary" id="caBtn" onclick="generateCA()"><span id="caBtnTxt">📰 Load Affairs</span></button>
+    </div>
+    <div id="caOutput"></div>
+  </div>
+
+  <!-- GK Capsule -->
+  <div id="gkTab-gk" style="display:none">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select id="gkChapter" style="flex:1">
+        <option>Indian History</option><option>Indian Geography</option>
+        <option>Indian Polity</option><option>Indian Economy</option>
+        <option>Science & Technology</option><option>World Geography</option>
+        <option>Sports & Games</option><option>Art & Culture</option>
+        <option>Important Days & Events</option><option>National Symbols</option>
+      </select>
+      <button class="btn btn-primary" id="gkBtn" onclick="generateGKCapsule()"><span id="gkBtnTxt">🧠 Generate Capsule</span></button>
+    </div>
+    <div id="gkCapsuleOutput" class="ai-box" style="display:none"></div>
+  </div>
+
+  <!-- GK Quiz tab -->
+  <div id="gkTab-quiz" style="display:none">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select id="gkqTopic" style="flex:1">
+        <option>Mix of All Topics</option><option>Indian History</option><option>Indian Polity</option>
+        <option>Geography</option><option>Economy</option><option>Sports</option><option>Science</option>
+      </select>
+      <button class="btn btn-primary" id="gkqBtn" onclick="generateGKQuiz()"><span id="gkqBtnTxt">🎯 Start GK Quiz</span></button>
+    </div>
+    <div id="gkQuizArea"></div>
+  </div>
+
+  <!-- One-Liners -->
+  <div id="gkTab-one" style="display:none">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select id="onelineTopic" style="flex:1">
+        <option>UPSC Mix</option><option>SSC Mix</option><option>Bank PO Mix</option>
+        <option>History Facts</option><option>Geography Facts</option><option>Science Facts</option>
+      </select>
+      <button class="btn btn-primary" id="oneBtn" onclick="generateOneLiners()"><span id="oneBtnTxt">📌 Generate</span></button>
+    </div>
+    <div id="oneOutput" class="ai-box" style="display:none"></div>
+  </div>
+</section>
+
+
+<!-- ===================== AUTH MODAL ===================== -->
+<div id="authModal" style="display:none;position:fixed;inset:0;z-index:1000;background:#000a;backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:90%;max-width:420px;position:relative">
+    <div style="font-family:Syne,sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:4px">
+      <span style="background:linear-gradient(135deg,#f5a623,#e05c2e);-webkit-background-clip:text;-webkit-text-fill-color:transparent">ExamGuru AI</span>
+    </div>
+    <div id="authTitle" style="font-size:1rem;font-weight:600;margin-bottom:20px;color:var(--text)">Create Free Account</div>
+    <input type="email" id="authEmail" placeholder="Your email" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:.9rem;outline:none;margin-bottom:10px">
+    <input type="password" id="authPass" placeholder="Password (min 6 chars)" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:.9rem;outline:none;margin-bottom:16px">
+    <button onclick="submitAuth()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:12px" id="authSubmitBtn">🚀 Sign Up Free</button>
+    <div style="text-align:center;font-size:.82rem;color:var(--muted)">
+      <span id="authToggleText">Already have account?</span>
+      <span onclick="toggleAuthMode()" style="color:var(--accent);cursor:pointer;margin-left:4px" id="authToggleLink">Sign In</span>
+    </div>
+    <div id="authError" style="color:var(--red);font-size:.82rem;margin-top:10px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- ===================== UPGRADE MODAL ===================== -->
+<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:1000;background:#000a;backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:90%;max-width:500px">
+    <div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:6px">🔓 Unlock Unlimited Access</div>
+    <div style="color:var(--muted);font-size:.85rem;margin-bottom:24px">You've used your 3 free questions today. Upgrade to keep learning!</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div style="background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:20px;text-align:center">
+        <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--accent)">₹99</div>
+        <div style="font-weight:700;margin:6px 0">Student Pro</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Unlimited questions<br>Notes & Explainer<br>GK & Current Affairs</div>
+        <button onclick="startPayment('pro')" class="btn btn-primary" style="width:100%;justify-content:center;font-size:.82rem">Upgrade ₹99/mo</button>
+      </div>
+      <div style="background:var(--surface);border:2px solid #3b82f6;border-radius:14px;padding:20px;text-align:center">
+        <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:#3b82f6">₹199</div>
+        <div style="font-weight:700;margin:6px 0">Exam Booster</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Everything in Pro<br>Unlimited Mock Tests<br>Priority support</div>
+        <button onclick="startPayment('booster')" class="btn" style="width:100%;justify-content:center;font-size:.82rem;background:#3b82f6;color:#fff">Upgrade ₹199/mo</button>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <span onclick="closeUpgradeModal()" style="color:var(--muted);font-size:.82rem;cursor:pointer">Maybe later</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== USER BAR (top right) ===================== -->
+
+</main>
+
+<script>
+// ====================== CONFIG (set your keys here) ======================
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';        // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+// ====================== SUPABASE INIT ======================
+const { createClient } = window.supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let authToken = null;
+let userPlan = 'free';
+let usageToday = 0;
+const FREE_LIMIT = 3;
+
+// ── Auth state listener ───────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session) {
+    currentUser = session.user;
+    authToken = session.access_token;
+    await loadUserPlan();
+    updateUserBar();
+    closeModal('authModal');
+  } else {
+    currentUser = null;
+    authToken = null;
+    userPlan = 'free';
+    updateUserBar();
+  }
+});
+
+async function loadUserPlan() {
+  if (!currentUser) return;
+  const today = new Date().toISOString();
+  const { data: sub } = await sb.from('subscriptions')
+    .select('plan').eq('user_id', currentUser.id)
+    .eq('status','active').gte('expires_at', today).single();
+  userPlan = sub?.plan || 'free';
+
+  const todayDate = new Date().toISOString().split('T')[0];
+  const { data: usage } = await sb.from('usage')
+    .select('count').eq('user_id', currentUser.id).eq('date', todayDate).single();
+  usageToday = usage?.count || 0;
+}
+
+// ── Auth modal ────────────────────────────────────────────────────────────
+let authMode = 'signup';
+
+function showAuthModal() {
+  document.getElementById('authModal').style.display = 'flex';
+}
+function toggleAuthMode() {
+  authMode = authMode === 'signup' ? 'signin' : 'signup';
+  document.getElementById('authTitle').textContent = authMode === 'signup' ? 'Create Free Account' : 'Welcome Back';
+  document.getElementById('authSubmitBtn').textContent = authMode === 'signup' ? '🚀 Sign Up Free' : '🔑 Sign In';
+  document.getElementById('authToggleText').textContent = authMode === 'signup' ? 'Already have account?' : "Don't have account?";
+  document.getElementById('authToggleLink').textContent = authMode === 'signup' ? 'Sign In' : 'Sign Up';
+  document.getElementById('authError').textContent = '';
+}
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Enter email and password'; return; }
+
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Please wait...';
+
+  let result;
+  if (authMode === 'signup') {
+    result = await sb.auth.signUp({ email, password: pass });
+  } else {
+    result = await sb.auth.signInWithPassword({ email, password: pass });
+  }
+
+  btn.disabled = false;
+  btn.textContent = authMode === 'signup' ? '🚀 Sign Up Free' : '🔑 Sign In';
+
+  if (result.error) {
+    errEl.textContent = result.error.message;
+  } else if (authMode === 'signup' && !result.data.session) {
+    errEl.style.color = 'var(--green)';
+    errEl.textContent = '✅ Check your email to confirm, then sign in!';
+  }
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeUpgradeModal() { closeModal('upgradeModal'); }
+
+// ── User bar ──────────────────────────────────────────────────────────────
+function updateUserBar() {
+  const bar = document.getElementById('userBar');
+  if (!bar) return;
+  if (currentUser) {
+    const planBadge = userPlan === 'free' ? '🆓 Free' : userPlan === 'pro' ? '⭐ Pro' : '🚀 Booster';
+    bar.innerHTML = `
+      <span style="font-size:.8rem;color:var(--muted)">${currentUser.email}</span>
+      <span class="pill pill-orange">${planBadge}</span>
+      ${userPlan==='free' ? `<span style="font-size:.78rem;color:var(--muted)">${FREE_LIMIT - usageToday} left today</span>` : ''}
+      <button onclick="signOut()" class="btn btn-secondary" style="padding:5px 12px;font-size:.78rem">Sign Out</button>
+    `;
+  } else {
+    bar.innerHTML = `
+      <button onclick="showAuthModal()" class="btn btn-primary" style="padding:7px 16px;font-size:.82rem">🔑 Login / Sign Up</button>
+    `;
+  }
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+}
+
+// ── Payment ───────────────────────────────────────────────────────────────
+async function startPayment(plan) {
+  if (!currentUser) { showAuthModal(); return; }
+
+  const res = await fetch('/api/create-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan, token: authToken }),
+  });
+  const order = await res.json();
+  if (order.error) { alert('Error: ' + order.error); return; }
+
+  const rzp = new Razorpay({
+    key: order.key_id,
+    amount: order.amount,
+    currency: order.currency,
+    name: 'ExamGuru AI',
+    description: order.description,
+    order_id: order.order_id,
+    prefill: { email: order.user_email, name: order.user_name },
+    theme: { color: '#f5a623' },
+    handler: async function(response) {
+      const verifyRes = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+          plan, token: authToken,
+        }),
+      });
+      const result = await verifyRes.json();
+      if (result.success) {
+        await loadUserPlan();
+        updateUserBar();
+        closeModal('upgradeModal');
+        alert('🎉 Payment successful! You now have ' + plan + ' access.');
+      } else {
+        alert('Payment verification failed. Contact support.');
+      }
+    },
+  });
+  rzp.open();
+}
+
+// ── Usage gate (called before every AI request) ───────────────────────────
+function checkUsageGate() {
+  if (!currentUser) {
+    showAuthModal();
+    return false;
+  }
+  if (userPlan === 'free' && usageToday >= FREE_LIMIT) {
+    document.getElementById('upgradeModal').style.display = 'flex';
+    return false;
+  }
+  return true;
+}
+
+// Increment local counter (actual count tracked server-side)
+function incrementLocalUsage() { usageToday++; updateUserBar(); }
+
+// ====================== API CALLS via Backend ======================
+// Your API key lives safely in Vercel env variables — never exposed to users
+
+async function callClaude(prompt, streamEl) {
+  if(!checkUsageGate()) throw new Error('gate');
+  if(streamEl) { streamEl.classList.add('loading'); streamEl.textContent = ''; }
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, stream: true, token: authToken })
+  });
+  if(res.status === 429) {
+    const d = await res.json();
+    if(streamEl) { streamEl.classList.remove('loading'); streamEl.textContent=''; }
+    document.getElementById('upgradeModal').style.display='flex';
+    throw new Error('limit');
+  }
+  let text = '';
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  while(true) {
+    const { done, value } = await reader.read();
+    if(done) break;
+    const chunk = dec.decode(value);
+    const lines = chunk.split('\n');
+    for(const line of lines) {
+      if(line.startsWith('data: ')) {
+        try {
+          const d = JSON.parse(line.slice(6));
+          if(d.type === 'content_block_delta' && d.delta?.text) {
+            text += d.delta.text;
+            if(streamEl) streamEl.textContent = text;
+          }
+        } catch(e){}
+      }
+    }
+  }
+  if(streamEl) streamEl.classList.remove('loading');
+  incrementLocalUsage();
+  return text;
+}
+
+async function callClaudeJSON(prompt) {
+  if(!checkUsageGate()) throw new Error('gate');
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, stream: false, token: authToken })
+  });
+  if(res.status === 429) {
+    document.getElementById('upgradeModal').style.display='flex';
+    throw new Error('limit');
+  }
+  const data = await res.json();
+  const raw = data.content[0].text;
+  const clean = raw.replace(/```json|```/g,'').trim();
+  incrementLocalUsage();
+  return JSON.parse(clean);
+}
+
+// ====================== NAV ======================
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ====================== QUIZ ======================
+let quizScore=0, quizCorrect=0, quizWrong=0;
+
+async function generateQuiz() {
+  const exam = document.getElementById('quizExam').value;
+  const sub = document.getElementById('quizSubject').value;
+  const diff = document.getElementById('quizDifficulty').value;
+  const btn = document.getElementById('generateQuizBtn');
+  const txt = document.getElementById('quizBtnTxt');
+  btn.disabled = true; txt.innerHTML = '<span class="spinner"></span> Generating...';
+
+  const prompt = `Generate 3 unique multiple choice questions for ${exam} exam on "${sub}" at ${diff} difficulty.
+Return ONLY a JSON array, no explanation. Format:
+[{"q":"question","opts":["A","B","C","D"],"ans":0,"explain":"brief explanation (1-2 lines)"}]
+ans is the index (0-3) of the correct option. Make questions exam-realistic.`;
+
+  try {
+    const qs = await callClaudeJSON(prompt);
+    renderQuizQuestions(qs);
+  } catch(e) {
+    document.getElementById('quizArea').innerHTML = `<div class="ai-box" style="color:var(--red)">Error generating. Try again.</div>`;
+  }
+  btn.disabled=false; txt.innerHTML='⚡ Generate';
+}
+
+function renderQuizQuestions(qs) {
+  const area = document.getElementById('quizArea');
+  area.innerHTML = '';
+  qs.forEach((q,qi) => {
+    const el = document.createElement('div');
+    el.className = 'quiz-question-card';
+    el.innerHTML = `
+      <div class="quiz-q-header">
+        <span class="pill pill-orange" style="margin-bottom:8px;display:inline-block">Q${qi+1}</span><br>
+        ${q.q}
+      </div>
+      <div class="quiz-options" id="opts-${qi}">
+        ${q.opts.map((o,i)=>`<div class="quiz-opt" onclick="selectOpt(${qi},${i},${q.ans})" data-qi="${qi}" data-i="${i}">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
+      </div>
+    `;
+    area.appendChild(el);
+  });
+  window._quizData = qs;
+}
+
+function selectOpt(qi, chosen, ans) {
+  const opts = document.querySelectorAll(`#opts-${qi} .quiz-opt`);
+  opts.forEach(o => o.classList.add('disabled'));
+  opts[ans].classList.add('correct');
+  if(chosen !== ans) {
+    opts[chosen].classList.add('wrong');
+    quizWrong++;
+  } else {
+    quizScore += 4; quizCorrect++;
+  }
+  updateScoreBar();
+  // Show explanation
+  const q = window._quizData[qi];
+  const expDiv = document.createElement('div');
+  expDiv.className = 'quiz-explanation';
+  expDiv.innerHTML = `💡 ${q.explain}`;
+  const optsEl = document.getElementById(`opts-${qi}`);
+  optsEl.parentNode.insertBefore(expDiv, optsEl.nextSibling);
+}
+
+function updateScoreBar() {
+  document.getElementById('scoreNum').textContent = quizScore;
+  document.getElementById('correctCount').textContent = `✓ ${quizCorrect}`;
+  document.getElementById('wrongCount').textContent = `✗ ${quizWrong}`;
+  document.getElementById('scoreDetail').textContent = `${quizCorrect+quizWrong} answered • +4 per correct`;
+}
+
+// ====================== INTERVIEW ======================
+async function generateInterview() {
+  const role = document.getElementById('intRole').value;
+  const round = document.getElementById('intRound').value;
+  const level = document.getElementById('intLevel').value;
+  const btn = document.getElementById('intBtn');
+  const txt = document.getElementById('intBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const prompt = `Generate 5 realistic ${round} interview questions for a ${level} ${role} candidate in India.
+Return ONLY a JSON array:
+[{"q":"question","a":"model answer in 3-4 sentences, practical and specific to India context"}]`;
+
+  try {
+    const qs = await callClaudeJSON(prompt);
+    const area = document.getElementById('intQA');
+    area.innerHTML = qs.map((item,i)=>`
+      <div class="qa-item">
+        <div class="qa-q">Q${i+1}. ${item.q}</div>
+        <div class="qa-a">💬 ${item.a}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('intQA').innerHTML = `<div class="ai-box" style="color:var(--red)">Error. Try again.</div>`;
+  }
+  btn.disabled=false; txt.innerHTML='⚡ Generate Questions';
+}
+
+// ====================== EXPLAINER ======================
+async function explainTopic() {
+  const topic = document.getElementById('expTopic').value.trim();
+  if(!topic) { alert('Enter a topic!'); return; }
+  const exam = document.getElementById('expExam').value;
+  const lang = document.getElementById('expLang').value;
+
+  const btn = document.getElementById('expBtn');
+  const txt = document.getElementById('expBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const out = document.getElementById('expOutput');
+  out.style.display='block'; out.textContent='';
+
+  const prompt = `Explain "${topic}" for ${exam} exam preparation in ${lang}.
+Structure:
+1. Simple Definition (2 lines)
+2. Key Points (5 bullets)
+3. Real-world Example (India context)
+4. Memory Trick / Mnemonic
+5. Likely Exam Questions on this topic
+
+Keep it engaging and student-friendly.`;
+
+  await callClaude(prompt, out);
+  btn.disabled=false; txt.innerHTML='📖 Explain';
+}
+
+// ====================== MOCK TEST ======================
+let mockQs=[], mockIdx=0, mockCor=0, mockWrg=0, mockTimer=null, mockSecs=60;
+
+async function startMock() {
+  const exam = document.getElementById('mockExam').value;
+  const count = parseInt(document.getElementById('mockQCount').value);
+  mockSecs = parseInt(document.getElementById('mockTime').value);
+  const btn = document.getElementById('mockStartBtn');
+  const txt = document.getElementById('mockStartTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span> Generating...';
+
+  const prompt = `Generate ${count} MCQ questions for ${exam} exam (mixed subjects).
+Return ONLY JSON array:
+[{"q":"question","opts":["A","B","C","D"],"ans":0,"explain":"brief explanation"}]`;
+
+  try {
+    mockQs = await callClaudeJSON(prompt);
+    mockIdx=0; mockCor=0; mockWrg=0;
+    document.getElementById('mockSetup').style.display='none';
+    document.getElementById('mockTest').style.display='block';
+    document.getElementById('mockResult').style.display='none';
+    showMockQ();
+  } catch(e) {
+    alert('Error generating. Try again.');
+  }
+  btn.disabled=false; txt.innerHTML='🚀 Start Test';
+}
+
+function showMockQ() {
+  if(mockIdx >= mockQs.length) { endMock(); return; }
+  const q = mockQs[mockIdx];
+  const total = mockQs.length;
+  document.getElementById('mockQLabel').textContent = `Q ${mockIdx+1} / ${total}`;
+  document.getElementById('mockBar').style.width = `${(mockIdx/total)*100}%`;
+  document.getElementById('mockQArea').innerHTML = `
+    <div class="quiz-question-card">
+      <div class="quiz-q-header">${q.q}</div>
+      <div class="quiz-options" id="mockOpts">
+        ${q.opts.map((o,i)=>`<div class="quiz-opt" onclick="mockAnswer(${i},${q.ans})">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
+      </div>
+    </div>
+  `;
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(mockTimer);
+  let s = mockSecs;
+  updateTimerDisplay(s);
+  mockTimer = setInterval(()=>{
+    s--;
+    updateTimerDisplay(s);
+    if(s<=0){ clearInterval(mockTimer); mockAnswer(-1, mockQs[mockIdx].ans); }
+  }, 1000);
+}
+
+function updateTimerDisplay(s) {
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  document.getElementById('mockTimer').textContent = `${mm}:${ss}`;
+}
+
+function mockAnswer(chosen, ans) {
+  clearInterval(mockTimer);
+  const opts = document.querySelectorAll('#mockOpts .quiz-opt');
+  opts.forEach(o => o.classList.add('disabled'));
+  if(chosen===-1) { /* timeout */ }
+  else if(chosen===ans) { opts[ans].classList.add('correct'); mockCor++; }
+  else { opts[ans].classList.add('correct'); opts[chosen].classList.add('wrong'); mockWrg++; }
+  setTimeout(()=>{ mockIdx++; showMockQ(); }, 1200);
+}
+
+function endMockEarly() { clearInterval(mockTimer); endMock(); }
+
+function endMock() {
+  document.getElementById('mockTest').style.display='none';
+  document.getElementById('mockResult').style.display='block';
+  const score = mockCor*4 - mockWrg*1;
+  document.getElementById('resScore').textContent = score;
+  document.getElementById('resCorrect').textContent = mockCor;
+  document.getElementById('resWrong').textContent = mockWrg;
+  // Review
+  const rev = document.getElementById('mockReview');
+  rev.innerHTML = `<div style="font-weight:600;margin-bottom:12px">📋 Review</div>` +
+    mockQs.map((q,i)=>`
+      <div class="qa-item">
+        <div class="qa-q">Q${i+1}. ${q.q}</div>
+        <div style="font-size:.84rem;color:var(--green)">✓ ${q.opts[q.ans]}</div>
+        <div class="qa-a" style="margin-top:6px">💡 ${q.explain}</div>
+      </div>
+    `).join('');
+}
+
+function resetMock() {
+  document.getElementById('mockSetup').style.display='block';
+  document.getElementById('mockResult').style.display='none';
+}
+
+// ====================== NOTES ======================
+let notes = JSON.parse(localStorage.getItem('examguru_notes')||'[]');
+
+function saveNote() {
+  const title = document.getElementById('noteTitle').value.trim();
+  const body = document.getElementById('noteBody').value.trim();
+  const tag = document.getElementById('noteTag').value;
+  if(!title||!body) { alert('Add title and content!'); return; }
+  notes.push({ id: Date.now(), title, body, tag, date: new Date().toLocaleDateString('en-IN') });
+  localStorage.setItem('examguru_notes', JSON.stringify(notes));
+  document.getElementById('noteTitle').value='';
+  document.getElementById('noteBody').value='';
+  renderNotes();
+}
+
+async function generateNote() {
+  const topic = document.getElementById('aiNoteTopic').value.trim();
+  if(!topic) { alert('Enter a topic!'); return; }
+  const exam = document.getElementById('aiNoteExam').value;
+  const btn = document.getElementById('aiNoteBtn');
+  const txt = document.getElementById('aiNoteBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const out = document.getElementById('aiNoteOutput');
+  out.style.display='block';
+
+  const prompt = `Create concise, well-structured study notes on "${topic}" for ${exam} exam.
+Include: Key definitions, Important points, Facts & figures, Examples, Common exam traps. 
+Format clearly with headings.`;
+
+  await callClaude(prompt, out);
+  document.getElementById('saveAiNoteBtn').style.display='inline-flex';
+  btn.disabled=false; txt.innerHTML='⚡ Generate Notes';
+}
+
+function saveAiNote() {
+  const topic = document.getElementById('aiNoteTopic').value.trim();
+  const body = document.getElementById('aiNoteOutput').textContent;
+  const tag = document.getElementById('aiNoteExam').value;
+  notes.push({ id: Date.now(), title: `[AI] ${topic}`, body, tag, date: new Date().toLocaleDateString('en-IN') });
+  localStorage.setItem('examguru_notes', JSON.stringify(notes));
+  renderNotes();
+  document.getElementById('saveAiNoteBtn').style.display='none';
+  alert('Notes saved!');
+}
+
+function deleteNote(id) {
+  notes = notes.filter(n => n.id !== id);
+  localStorage.setItem('examguru_notes', JSON.stringify(notes));
+  renderNotes();
+}
+
+function renderNotes() {
+  const list = document.getElementById('notesList');
+  if(!notes.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>No notes yet. Add or generate some!</div></div>`;
+    return;
+  }
+  list.innerHTML = notes.slice().reverse().map(n=>`
+    <div class="note-card">
+      <div class="note-card-header">
+        <div class="note-title">${n.title}</div>
+        <button class="note-del" onclick="deleteNote(${n.id})">🗑</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="pill pill-orange">${n.tag}</span>
+        <span class="note-meta">${n.date}</span>
+      </div>
+      <div class="note-body">${n.body.slice(0,300)}${n.body.length>300?'…':''}</div>
+    </div>
+  `).join('');
+}
+renderNotes();
+
+// ====================== GK & CA ======================
+let activeGkTab = 'ca';
+function setGkTab(tab, el) {
+  document.querySelectorAll('.gk-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['ca','gk','quiz','one'].forEach(t => document.getElementById(`gkTab-${t}`).style.display = t===tab?'block':'none');
+  activeGkTab = tab;
+}
+
+async function generateCA() {
+  const month = document.getElementById('caMonth').value;
+  const cat = document.getElementById('caCategory').value;
+  const btn = document.getElementById('caBtn');
+  const txt = document.getElementById('caBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const prompt = `Generate 8 important current affairs for ${month}, category: ${cat}. India-focused exam perspective.
+Return ONLY JSON array:
+[{"title":"headline","summary":"2-3 sentences of context and significance","category":"tag","examTip":"which exam this is most relevant for"}]`;
+
+  try {
+    const items = await callClaudeJSON(prompt);
+    const out = document.getElementById('caOutput');
+    out.innerHTML = items.map((item,i)=>`
+      <div class="ca-card">
+        <div class="ca-header" onclick="toggleCA(this)">
+          <span class="pill pill-blue">${item.category||cat}</span>
+          <span class="ca-title">${item.title}</span>
+          <span class="ca-toggle">▼</span>
+        </div>
+        <div class="ca-body" style="display:none">
+          ${item.summary}
+          <div style="margin-top:10px"><span class="pill pill-orange">📌 ${item.examTip}</span></div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('caOutput').innerHTML=`<div class="ai-box" style="color:var(--red)">Error. Try again.</div>`;
+  }
+  btn.disabled=false; txt.innerHTML='📰 Load Affairs';
+}
+
+function toggleCA(header) {
+  const body = header.nextElementSibling;
+  const tog = header.querySelector('.ca-toggle');
+  const open = body.style.display==='none';
+  body.style.display = open?'block':'none';
+  tog.classList.toggle('open', open);
+}
+
+async function generateGKCapsule() {
+  const ch = document.getElementById('gkChapter').value;
+  const btn = document.getElementById('gkBtn');
+  const txt = document.getElementById('gkBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const out = document.getElementById('gkCapsuleOutput');
+  out.style.display='block';
+  const prompt = `Create a GK capsule on "${ch}" for Indian competitive exams.
+Include: Key facts, Important names/dates, Records, India-specific data, Frequently asked facts.
+Format clearly with sections. Be concise and exam-oriented.`;
+  await callClaude(prompt, out);
+  btn.disabled=false; txt.innerHTML='🧠 Generate Capsule';
+}
+
+let gkQuizData=[], gkScore=0, gkCorrect=0, gkWrong=0;
+async function generateGKQuiz() {
+  const topic = document.getElementById('gkqTopic').value;
+  const btn = document.getElementById('gkqBtn');
+  const txt = document.getElementById('gkqBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const prompt = `Generate 5 GK MCQ questions on "${topic}" for Indian competitive exams.
+Return ONLY JSON:
+[{"q":"question","opts":["A","B","C","D"],"ans":0,"explain":"fact in 1 line"}]`;
+  try {
+    gkQuizData = await callClaudeJSON(prompt);
+    gkScore=0; gkCorrect=0; gkWrong=0;
+    renderGKQuiz();
+  } catch(e) {}
+  btn.disabled=false; txt.innerHTML='🎯 Start GK Quiz';
+}
+
+function renderGKQuiz() {
+  const area = document.getElementById('gkQuizArea');
+  area.innerHTML = gkQuizData.map((q,qi)=>`
+    <div class="quiz-question-card">
+      <div class="quiz-q-header"><span class="pill pill-blue" style="margin-bottom:6px;display:inline-block">GK Q${qi+1}</span><br>${q.q}</div>
+      <div class="quiz-options" id="gkopts-${qi}">
+        ${q.opts.map((o,i)=>`<div class="quiz-opt" onclick="gkAnswer(${qi},${i},${q.ans})">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function gkAnswer(qi, chosen, ans) {
+  const opts = document.querySelectorAll(`#gkopts-${qi} .quiz-opt`);
+  opts.forEach(o=>o.classList.add('disabled'));
+  opts[ans].classList.add('correct');
+  if(chosen!==ans) opts[chosen].classList.add('wrong');
+  else gkCorrect++;
+  const expDiv = document.createElement('div');
+  expDiv.className='quiz-explanation';
+  expDiv.innerHTML=`💡 ${gkQuizData[qi].explain}`;
+  document.getElementById(`gkopts-${qi}`).after(expDiv);
+}
+
+async function generateOneLiners() {
+  const topic = document.getElementById('onelineTopic').value;
+  const btn = document.getElementById('oneBtn');
+  const txt = document.getElementById('oneBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span class="spinner"></span>';
+
+  const out = document.getElementById('oneOutput');
+  out.style.display='block';
+  const prompt = `Generate 20 important one-liner facts for "${topic}" exam preparation.
+Each on a new line starting with a bullet •. Facts should be surprising, specific, and exam-relevant.`;
+  await callClaude(prompt, out);
+  btn.disabled=false; txt.innerHTML='📌 Generate';
+}
+</script>
+</body>
+</html>
