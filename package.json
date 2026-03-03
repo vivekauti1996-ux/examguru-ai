@@ -2,10 +2,5 @@
   "name": "examguru-ai",
   "version": "1.0.0",
   "description": "ExamGuru AI – India's Smartest Exam Prep Platform",
-  "scripts": { "dev": "vercel dev" },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "razorpay": "^2.9.2"
-  },
   "engines": { "node": "24.x" }
 }
