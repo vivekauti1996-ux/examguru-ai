@@ -1,13 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
-    { "src": "public/**", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/api/chat", "dest": "/api/chat.js" },
-    { "src": "/api/create-order", "dest": "/api/create-order.js" },
-    { "src": "/api/verify-payment", "dest": "/api/verify-payment.js" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+  "rewrites": [
+    { "source": "/api/chat", "destination": "/api/chat.js" },
+    { "source": "/api/create-order", "destination": "/api/create-order.js" },
+    { "source": "/api/verify-payment", "destination": "/api/verify-payment.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
