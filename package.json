@@ -7,5 +7,5 @@
     "@supabase/supabase-js": "^2.39.0",
     "razorpay": "^2.9.2"
   },
-  "engines": { "node": "18.x" }
+  "engines": { "node": "24.x" }
 }
